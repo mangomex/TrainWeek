@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Weekly Workout Tracker</title>
+
+  <!-- App / PWA Icons -->
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TrainWeek">
+
+  <style>
+    :root{
+      --bg:#07070a;
+      --card:#12121a;
+      --text:#f6f7fb;
+      --muted:#b9bcc9;
+      --line:rgba(255,255,255,.14);
+      --line2:rgba(255,255,255,.22);
+
+      --good:#2dd4bf;   /* accent green */
+      --warn:#fbbf24;
+      --bad:#fb7185;
+
+      --field-bg:#0e111a;
+      --field-border:rgba(255,255,255,.32);
+      --field-border-focus:rgba(45,212,191,.55);
+
+      --shadow: 0 10px 30px rgba(0,0,0,.40);
+      --radius:20px;
+      --radius2:16px;
+
+      --pad:14px;
+      --gap:10px;
+      --tap:44px;
+
+      /* Today + past-day styling */
+      --today-ring: rgba(45,212,191,.55);
+      --today-bg: rgba(45,212,191,.09);
+      --past-opacity: .55;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:
+        radial-gradient(900px 600px at 15% 0%, rgba(45,212,191,.10), transparent 60%),
+        radial-gradient(900px 600px at 90% 10%, rgba(251,191,36,.08), transparent 60%),
+        var(--bg);
+      color:var(--text);
+    }
+
+    .app{
+      max-width: 760px;
+      margin: 0 auto;
+      display:flex;
+      flex-direction:column;
+      gap: var(--gap);
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), transparent 60%), var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .header{
+      padding: 14px var(--pad) 12px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 70%);
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width: 0;
+    }
+    .title h1{
+      margin:0;
+      font-size: 16px;
+      font-weight: 750;
+      letter-spacing: .2px;
+      line-height: 1.15;
+    }
+    .sub{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .nav{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    button{
+      appearance:none;
+      border: 1px solid var(--line2);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor:pointer;
+      min-height: var(--tap);
+      min-width: var(--tap);
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:hover{ background: rgba(255,255,255,.08); }
+    button:active{ transform: translateY(1px); }
+    button:focus{ outline:none; box-shadow: 0 0 0 3px rgba(45,212,191,.28); border-color: rgba(45,212,191,.45); }
+    .btn-primary{
+      background: rgba(45,212,191,.14);
+      border-color: rgba(45,212,191,.35);
+    }
+    .btn-ghost{
+      background: transparent;
+      border-color: var(--line2);
+    }
+    .btn-danger{
+      background: rgba(251,113,133,.12);
+      border-color: rgba(251,113,133,.30);
+    }
+
+    .content{
+      padding: var(--pad);
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+
+    .weekline{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      padding: 12px;
+      border-radius: var(--radius2);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+
+    .week-left{
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+    .week-left strong{
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+    .week-left .small{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .pills{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      font-size: 12px;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+
+    .bar{
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      overflow:hidden;
+      width: 180px;
+      max-width: 55vw;
+    }
+    .bar > div{
+      height:100%;
+      width:0%;
+      background: rgba(45,212,191,.78);
+      transition: width .25s ease;
+    }
+
+    /* Day cards */
+    .days{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 680px){
+      .days{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .day{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius: var(--radius2);
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      position: relative;
+    }
+
+    /* TODAY highlight */
+    .day.isToday{
+      border-color: var(--today-ring);
+      background: linear-gradient(180deg, var(--today-bg), rgba(255,255,255,.03));
+      box-shadow:
+        0 0 0 3px rgba(45,212,191,.18),
+        var(--shadow);
+    }
+    .day.isToday::before{
+      content:"Today";
+      position:absolute;
+      top:10px;
+      right:150px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color: rgba(45,212,191,.95);
+      background: rgba(45,212,191,.12);
+      border: 1px solid rgba(45,212,191,.25);
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+
+    /* Past days in the currently viewed week */
+    .day.isPast{
+      opacity: var(--past-opacity);
+      filter: saturate(.75);
+    }
+    /* subtle halftone / dotted overlay */
+    .day.isPast::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      border-radius: var(--radius2);
+      background-image: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px);
+      background-size: 10px 10px;
+      opacity: .35;
+      mix-blend-mode: overlay;
+    }
+
+    .dayTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 10px;
+    }
+    .dow{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .dow .name{
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+    .dow .date{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chip{
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      white-space:nowrap;
+      user-select:none;
+    }
+    .chip.anchor{ color: rgba(45,212,191,.98); border-color: rgba(45,212,191,.28); background: rgba(45,212,191,.10); }
+    .chip.optional{ color: rgba(251,191,36,.98); border-color: rgba(251,191,36,.28); background: rgba(251,191,36,.09); }
+    .chip.light{ color: rgba(148,163,184,.98); border-color: rgba(148,163,184,.28); background: rgba(148,163,184,.10); }
+
+    select{
+      width:100%;
+      min-height: var(--tap);
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--field-border);
+      background: var(--field-bg);
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 650;
+      outline:none;
+    }
+    select:focus{
+      border-color: var(--field-border-focus);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.22);
+    }
+    option, optgroup{
+      background: #0c0f16;
+      color: #f6f7fb;
+    }
+    option[disabled]{ color: #8b90a2; }
+
+    .dayActions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .note{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    details{
+      border-top: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 70%);
+    }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 12px var(--pad);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    summary::-webkit-details-marker{display:none}
+    .settingsTitle{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .settingsTitle strong{
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .settingsTitle span{
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .settingsBody{
+      padding: 0 var(--pad) var(--pad);
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+
+    .typeRow{
+      display:grid;
+      grid-template-columns: 1.2fr .95fr .65fr .45fr;
+      gap: 8px;
+      align-items:center;
+      padding: 10px;
+      border-radius: var(--radius2);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+    .typeRow input, .typeRow select{
+      min-height: var(--tap);
+      font-size: 14px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--field-border);
+      background: var(--field-bg);
+      color: var(--text);
+      outline:none;
+      width:100%;
+    }
+    .typeRow input:focus, .typeRow select:focus{
+      border-color: var(--field-border-focus);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.22);
+    }
+
+    .footerActions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-top: 6px;
+    }
+    .toast{
+      font-size: 12px;
+      color: var(--muted);
+      padding-left: 2px;
+      min-height: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <section class="panel">
+      <div class="header">
+        <div class="title">
+          <h1>TrainWeek</h1>
+          <div class="sub">Weeks start on <strong>Sunday</strong>. Rule: <strong>2–5</strong> workouts/week, with <strong>2 anchors</strong> first.</div>
+        </div>
+        <div class="nav">
+          <button class="btn-ghost" id="prevWeekBtn" aria-label="Previous week">◀ Previous</button>
+          <button class="btn-ghost" id="todayBtn">Current Week</button>
+          <button class="btn-ghost" id="nextWeekBtn" aria-label="Next week">Next ▶</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="weekline">
+          <div class="week-left">
+            <strong id="weekTitle">Week View</strong>
+            <div class="small" id="weekRange">—</div>
+          </div>
+          <div class="pills">
+            <span class="pill" id="pillWorkouts">Workouts: —</span>
+            <span class="pill" id="pillAnchors">Anchors: —</span>
+            <div class="bar" aria-label="Weekly progress bar"><div id="progressBar"></div></div>
+          </div>
+        </div>
+
+        <div class="note" id="weekHint"></div>
+
+        <div class="days" id="days"></div>
+      </div>
+
+      <details id="settingsDetails">
+        <summary>
+          <div class="settingsTitle">
+            <strong>Workout Types</strong>
+            <span>Edit your dropdown options</span>
+          </div>
+          <div class="nav">
+            <button class="btn-primary" id="addTypeBtn" type="button">+ Add</button>
+          </div>
+        </summary>
+
+        <div class="settingsBody">
+          <div class="note">
+            Optional/Light stay locked until you have <strong>2 Anchor</strong> workouts chosen in this week. Each workout type can be used <strong>once per week</strong>.
+          </div>
+
+          <div class="typeRow" style="opacity:.75">
+            <div class="note">Name</div>
+            <div class="note">Category</div>
+            <div class="note">Enabled</div>
+            <div class="note">Delete</div>
+          </div>
+
+          <div id="types"></div>
+
+          <div class="footerActions">
+            <button class="btn-danger" id="resetBtn" type="button">Reset Data</button>
+            <button id="exportBtn" type="button">Export</button>
+            <button id="importBtn" type="button">Import</button>
+            <input type="file" id="fileInput" accept="application/json" style="display:none"/>
+          </div>
+
+          <div class="toast" id="saveStatus"></div>
+        </div>
+      </details>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const LS_KEY = "weekly_workout_tracker_v3";
+
+  function uid(){
+    return "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+  }
+
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function isoDate(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+  function parseISO(s){ const [y,m,dd] = s.split("-").map(Number); return new Date(y, m-1, dd); }
+  function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function startOfWeekSunday(d){
+    const x = startOfDay(d);
+    const dow = x.getDay(); // 0=Sun
+    x.setDate(x.getDate() - dow);
+    return x;
+  }
+  function monthName(m){ return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m]; }
+  function fmtRange(ws){
+    const we = addDays(ws, 6);
+    return `${monthName(ws.getMonth())} ${ws.getDate()} – ${monthName(we.getMonth())} ${we.getDate()}, ${we.getFullYear()}`;
+  }
+  function fmtDay(d){ return `${monthName(d.getMonth())} ${d.getDate()}`; }
+  function dowName(i){ return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][i]; }
+
+  const DEFAULT_STATE = {
+    types: [
+      { id: uid(), label: "Anchor A", category: "anchor", enabled: true },
+      { id: uid(), label: "Anchor B", category: "anchor", enabled: true },
+      { id: uid(), label: "Anchor C", category: "anchor", enabled: true },
+      { id: uid(), label: "Optional", category: "optional", enabled: true },
+      { id: uid(), label: "Light", category: "light", enabled: true },
+    ],
+    entries: {}, // "YYYY-MM-DD": { date, workoutTypeId }
+    ui: { viewRefISO: isoDate(new Date()) }
+  };
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return structuredClone(DEFAULT_STATE);
+      const parsed = JSON.parse(raw);
+      if(!parsed.types || !parsed.entries || !parsed.ui) return structuredClone(DEFAULT_STATE);
+      return parsed;
+    } catch(e){
+      return structuredClone(DEFAULT_STATE);
+    }
+  }
+
+  let state = loadState();
+
+  function setSaveStatus(msg){
+    const el = document.getElementById("saveStatus");
+    el.textContent = msg;
+    clearTimeout(setSaveStatus._t);
+    setSaveStatus._t = setTimeout(() => el.textContent = "", 1200);
+  }
+
+  function saveState(){
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    setSaveStatus("Saved ✓");
+  }
+
+  // ---------- Rules ----------
+  function getTypeById(id){ return state.types.find(t => t.id === id); }
+
+  function entriesForWeek(weekStart){
+    const start = startOfWeekSunday(weekStart);
+    const end = addDays(start, 7); // exclusive
+    const out = [];
+    for(const [k, entry] of Object.entries(state.entries)){
+      const d = parseISO(k);
+      if(d >= start && d < end) out.push(entry);
+    }
+    return out;
+  }
+
+  function weekStats(refDate){
+    const ws = startOfWeekSunday(refDate);
+    const weekEntries = entriesForWeek(ws);
+    const usedIds = new Set(weekEntries.map(e => e.workoutTypeId));
+    const anchorCount = weekEntries.filter(e => getTypeById(e.workoutTypeId)?.category === "anchor").length;
+    const total = weekEntries.length;
+    return { weekStart: ws, weekEnd: addDays(ws, 7), total, anchorCount, usedIds, weekEntries };
+  }
+
+  function canUseTypeInWeek(dateISO, typeId){
+    const d = parseISO(dateISO);
+    const stats = weekStats(d);
+    const current = state.entries[dateISO];
+    const currentId = current?.workoutTypeId;
+
+    const type = getTypeById(typeId);
+    if(!type || !type.enabled) return { ok:false, reason:"Disabled" };
+
+    let total = stats.total;
+    if(current) total -= 1;
+    if(total >= 5) return { ok:false, reason:"Week already has 5 workouts" };
+
+    const used = new Set(stats.usedIds);
+    if(currentId) used.delete(currentId);
+    if(used.has(typeId)) return { ok:false, reason:"Already used this week" };
+
+    let anchorCount = stats.anchorCount;
+    if(currentId && getTypeById(currentId)?.category === "anchor") anchorCount -= 1;
+    if(type.category !== "anchor" && anchorCount < 2){
+      return { ok:false, reason:"Need 2 anchors first" };
+    }
+
+    return { ok:true, reason:"" };
+  }
+
+  // ---------- UI ----------
+  const daysEl = document.getElementById("days");
+  const weekRangeEl = document.getElementById("weekRange");
+  const pillWorkouts = document.getElementById("pillWorkouts");
+  const pillAnchors = document.getElementById("pillAnchors");
+  const progressBar = document.getElementById("progressBar");
+  const weekHint = document.getElementById("weekHint");
+  const typesWrap = document.getElementById("types");
+
+  function buildTypeOptionsForDate(selectEl, dateISO){
+    const current = state.entries[dateISO]?.workoutTypeId || "";
+    const d = parseISO(dateISO);
+    const stats = weekStats(d);
+
+    let anchorCount = stats.anchorCount;
+    const currentType = current ? getTypeById(current) : null;
+    if(currentType?.category === "anchor") anchorCount -= 1;
+
+    let total = stats.total;
+    if(current) total -= 1;
+    const atCap = total >= 5;
+
+    const used = new Set(stats.usedIds);
+    if(current) used.delete(current);
+
+    const types = state.types
+      .filter(t => t.enabled)
+      .slice()
+      .sort((a,b) => {
+        const order = { anchor:0, optional:1, light:2 };
+        const oa = order[a.category] ?? 9;
+        const ob = order[b.category] ?? 9;
+        if(oa !== ob) return oa - ob;
+        return a.label.localeCompare(b.label);
+      });
+
+    selectEl.innerHTML = "";
+
+    const optNone = document.createElement("option");
+    optNone.value = "";
+    optNone.textContent = "— Rest —";
+    selectEl.appendChild(optNone);
+
+    const groups = [
+      { key:"anchor", label:"Core / Anchor" },
+      { key:"optional", label:"Optional" },
+      { key:"light", label:"Light" }
+    ];
+
+    for(const g of groups){
+      const og = document.createElement("optgroup");
+      og.label = g.label;
+
+      const inGroup = types.filter(t => t.category === g.key);
+      if(inGroup.length === 0) continue;
+
+      for(const t of inGroup){
+        const opt = document.createElement("option");
+        opt.value = t.id;
+
+        let reason = "";
+        if(atCap) reason = "Week full (5)";
+        else if(used.has(t.id)) reason = "Used this week";
+        else if(t.category !== "anchor" && anchorCount < 2) reason = "Need 2 anchors";
+
+        if(reason){
+          opt.disabled = true;
+          opt.textContent = `${t.label} — (${reason})`;
+        } else {
+          opt.textContent = t.label;
+        }
+        og.appendChild(opt);
+      }
+      selectEl.appendChild(og);
+    }
+
+    selectEl.value = current;
+  }
+
+  function chipClassForType(type){
+    if(!type) return "chip light";
+    if(type.category === "anchor") return "chip anchor";
+    if(type.category === "optional") return "chip optional";
+    return "chip light";
+  }
+
+  function renderWeek(){
+    const ref = parseISO(state.ui.viewRefISO);
+    const stats = weekStats(ref);
+    weekRangeEl.textContent = fmtRange(stats.weekStart);
+
+    pillWorkouts.textContent = `Workouts: ${stats.total} / 5`;
+    pillAnchors.textContent = `Anchors: ${stats.anchorCount} / 2`;
+    progressBar.style.width = `${Math.min(100, (stats.total/5)*100)}%`;
+
+    if(stats.total < 2){
+      weekHint.textContent = "Aim for at least 2 workouts this week (2 = good).";
+      weekHint.style.color = "var(--muted)";
+    } else if(stats.total < 5){
+      weekHint.textContent = "Nice. 2 = good. 5 = outdid myself.";
+      weekHint.style.color = "var(--good)";
+    } else {
+      weekHint.textContent = "Outdid myself: 5 workouts scheduled this week.";
+      weekHint.style.color = "var(--warn)";
+    }
+
+    const todayISO = isoDate(new Date());
+    const todayStart = startOfDay(new Date());
+
+    daysEl.innerHTML = "";
+    for(let i=0;i<7;i++){
+      const d = addDays(stats.weekStart, i);
+      const dISO = isoDate(d);
+
+      const card = document.createElement("div");
+      card.className = "day";
+
+      // highlight today if it exists in the visible week
+      if(dISO === todayISO) card.classList.add("isToday");
+
+      // grey out past days (only meaningful if viewing the current week)
+      // we compare actual dates (start-of-day)
+      if(startOfDay(d) < todayStart) card.classList.add("isPast");
+
+      const top = document.createElement("div");
+      top.className = "dayTop";
+
+      const dow = document.createElement("div");
+      dow.className = "dow";
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = dowName(d.getDay());
+      const date = document.createElement("div");
+      date.className = "date";
+      date.textContent = fmtDay(d);
+      dow.appendChild(name);
+      dow.appendChild(date);
+
+      const chip = document.createElement("div");
+      const entry = state.entries[dISO];
+      const type = entry ? getTypeById(entry.workoutTypeId) : null;
+      chip.className = chipClassForType(type);
+      chip.textContent = entry ? (type?.label ?? "Unknown") : "Rest";
+
+      top.appendChild(dow);
+      top.appendChild(chip);
+
+      const sel = document.createElement("select");
+      sel.setAttribute("aria-label", `Workout for ${dISO}`);
+      buildTypeOptionsForDate(sel, dISO);
+
+      sel.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if(val === ""){
+          delete state.entries[dISO];
+          saveState();
+          renderAll();
+          return;
+        }
+        const ok = canUseTypeInWeek(dISO, val);
+        if(!ok.ok){
+          alert(ok.reason);
+          renderAll();
+          return;
+        }
+        state.entries[dISO] = { date: dISO, workoutTypeId: val };
+        saveState();
+        renderAll();
+      });
+
+      const actions = document.createElement("div");
+      actions.className = "dayActions";
+
+      const note = document.createElement("div");
+      note.className = "note";
+      const live = weekStats(parseISO(dISO));
+      if(live.anchorCount < 2){
+        note.textContent = "Optional/Light unlock after 2 anchors this week.";
+      } else {
+        note.textContent = "Optional/Light unlocked.";
+        note.style.color = "var(--good)";
+      }
+
+      const clear = document.createElement("button");
+      clear.className = "btn-ghost";
+      clear.type = "button";
+      clear.textContent = "Clear";
+      clear.addEventListener("click", () => {
+        delete state.entries[dISO];
+        saveState();
+        renderAll();
+      });
+
+      actions.appendChild(note);
+      actions.appendChild(clear);
+
+      card.appendChild(top);
+      card.appendChild(sel);
+      card.appendChild(actions);
+
+      daysEl.appendChild(card);
+    }
+  }
+
+  function renderTypes(){
+    typesWrap.innerHTML = "";
+    state.types.forEach((t, idx) => {
+      const row = document.createElement("div");
+      row.className = "typeRow";
+
+      const name = document.createElement("input");
+      name.value = t.label;
+      name.placeholder = "Name";
+      name.addEventListener("input", () => {
+        t.label = name.value.trim() || "Untitled";
+        saveState();
+        renderAll();
+      });
+
+      const cat = document.createElement("select");
+      cat.innerHTML = `
+        <option value="anchor">Anchor</option>
+        <option value="optional">Optional</option>
+        <option value="light">Light</option>
+      `;
+      cat.value = t.category;
+      cat.addEventListener("change", () => {
+        t.category = cat.value;
+        saveState();
+        renderAll();
+      });
+
+      const enabled = document.createElement("select");
+      enabled.innerHTML = `
+        <option value="true">On</option>
+        <option value="false">Off</option>
+      `;
+      enabled.value = String(!!t.enabled);
+      enabled.addEventListener("change", () => {
+        t.enabled = (enabled.value === "true");
+        saveState();
+        renderAll();
+      });
+
+      const del = document.createElement("button");
+      del.className = "btn-danger";
+      del.type = "button";
+      del.textContent = "Delete";
+      del.addEventListener("click", () => {
+        const used = Object.values(state.entries).some(e => e.workoutTypeId === t.id);
+        if(used){
+          t.enabled = false;
+          setSaveStatus("Type used in history → turned Off");
+        } else {
+          state.types.splice(idx, 1);
+          setSaveStatus("Deleted");
+        }
+        saveState();
+        renderAll();
+      });
+
+      row.appendChild(name);
+      row.appendChild(cat);
+      row.appendChild(enabled);
+      row.appendChild(del);
+
+      typesWrap.appendChild(row);
+    });
+  }
+
+  // ---------- Navigation ----------
+  document.getElementById("todayBtn").addEventListener("click", () => {
+    state.ui.viewRefISO = isoDate(new Date());
+    saveState();
+    renderAll();
+  });
+
+  document.getElementById("prevWeekBtn").addEventListener("click", () => {
+    const ref = parseISO(state.ui.viewRefISO);
+    state.ui.viewRefISO = isoDate(addDays(ref, -7));
+    saveState();
+    renderAll();
+  });
+
+  document.getElementById("nextWeekBtn").addEventListener("click", () => {
+    const ref = parseISO(state.ui.viewRefISO);
+    state.ui.viewRefISO = isoDate(addDays(ref, 7));
+    saveState();
+    renderAll();
+  });
+
+  document.getElementById("addTypeBtn").addEventListener("click", () => {
+    state.types.push({ id: uid(), label: "New Workout", category: "optional", enabled: true });
+    saveState();
+    renderAll();
+  });
+
+  // ---------- Import/Export ----------
+  document.getElementById("exportBtn").addEventListener("click", () => {
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "weekly-workout-data.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  const fileInput = document.getElementById("fileInput");
+  document.getElementById("importBtn").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async () => {
+    const f = fileInput.files?.[0];
+    if(!f) return;
+    try{
+      const txt = await f.text();
+      const parsed = JSON.parse(txt);
+      if(!parsed.types || !parsed.entries || !parsed.ui) throw new Error("Invalid format");
+      state = parsed;
+      saveState();
+      renderAll();
+      setSaveStatus("Imported ✓");
+    }catch(e){
+      setSaveStatus("Import failed");
+      alert("Could not import JSON. Make sure it's a valid export from this app.");
+    }finally{
+      fileInput.value = "";
+    }
+  });
+
+  // ---------- Reset ----------
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    const ok = confirm("Reset all data (types + workouts)?");
+    if(!ok) return;
+    // preserve fresh ids for defaults
+    state = {
+      types: [
+        { id: uid(), label: "Anchor A", category: "anchor", enabled: true },
+        { id: uid(), label: "Anchor B", category: "anchor", enabled: true },
+        { id: uid(), label: "Anchor C", category: "anchor", enabled: true },
+        { id: uid(), label: "Optional", category: "optional", enabled: true },
+        { id: uid(), label: "Light", category: "light", enabled: true },
+      ],
+      entries: {},
+      ui: { viewRefISO: isoDate(new Date()) }
+    };
+    saveState();
+    renderAll();
+  });
+
+  function renderAll(){
+    renderTypes();
+    renderWeek();
+  }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
